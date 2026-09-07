@@ -1,0 +1,112 @@
+configfile: "config.yml"
+chromosomes = [*range(1,23),'X','Y']
+#chromosomes = [*range(20,22)]
+
+rule all:
+	input:
+#		expand("{outdir}/boundaries/{sample}_{res}_{win}.bed",sample=config["samples"],win=config["win"],outdir=config["outdir"],res=config["res"])
+#		expand("{outdir}/DI/{sample}/{chr}.txt",sample=config["samples"],outdir=config["outdir"],chr=chromosomes)
+#		expand("{outdir}/unified/combined_DI_raw.txt",outdir=config["outdir"])
+#		expand("{outdir}/matrixes/{sample}/{chr}.txt",outdir=config["outdir"],sample=config["samples"],chr=chromosomes)
+#		expand("{outdir}/loops/{sample}/{chr}/{res}bp_{chr}.tsv",sample=config["samples"],res=config["res"],outdir=config["outdir"],chr=chromosomes)
+		expand("{outdir}/loops/unified_loops.pgl",outdir=config["outdir"])
+#		expand("{outdir}/matrixes/{sample}/{chr}.txt",outdir=config["outdir"],sample=config["samples"],chr=chromosomes)
+
+#rule call_loops:
+#	input:
+#		expand("{in_dir}/{{sample}}.hic",in_dir=config["indir"])
+#	output:
+#		"{outdir}/loops/{sample}/{chr}/{res}bp_{chr}.tsv"
+#	conda:
+#		"mustache_environment.yml"
+#	shell:
+#		"""
+#		#module load anaconda
+#		#source activate mustache
+#		python3 {config[mustache]} -f {input} -r {wildcards.res}bp -o {output}.tmp -pt 0.1 -st 0.8 -sz 1.6 -ch {wildcards.chr} -d 5000000
+#		
+#		tail -n +2 {output}.tmp | awk -v OFS="\\t" -v s={wildcards.sample} -v r={wildcards.res} '{{print "chr"$1, $2, $3, "chr"$4, $5, $6, $7, $8,  s, r}}' >> {output}
+#		rm {output}.tmp
+#		"""
+
+
+rule generate_inputs:
+	input:
+		expand("{in_dir}/{{sample}}.hic",in_dir=config["indir"])
+	output:
+		"{outdir}/matrixes/{sample}/{chr}.txt"
+	shell:
+		"""		
+		java -jar {config[juicer]} dump observed NONE {input} {wildcards.chr} {wildcards.chr} BP {config[res]} {output}
+		java -jar {config[juicer]} dump norm SCALE {input} {wildcards.chr} BP {config[res]} {output}.norm
+		
+		
+		cat {output} |  awk -v chr="chr"{wildcards.chr} -v r={config[res]} '{{print chr,$1+r/2,chr,$2+r/2,$3}}' > {output}.tmp && mv {output}.tmp {output}
+		cat {output}.norm | awk -v r={config[res]} -v chr="chr"{wildcards.chr} '{{print chr,(NR*r)-r/2,$1}}'  > {output}.tmp && mv {output}.tmp {output}.norm
+		
+		"""
+rule call_loops:
+	input:
+		"{outdir}/matrixes/{sample}/{chr}.txt"
+	output:
+		"{outdir}/loops/{sample}/{chr}/{res}bp_{chr}.tsv"
+	conda:
+		"mustache_environment.yml"
+	shell:
+		"""
+		#module load anaconda
+		#source activate mustache
+		python3 {config[mustache]} -f {input} -b {input}.norm -r {wildcards.res}bp -o {output}.tmp -pt 0.1 -st 0.8 -sz 1.6 -ch {wildcards.chr} -d 5000000
+		
+		tail -n +2 {output}.tmp | awk -v OFS="\\t" -v s={wildcards.sample} -v r={wildcards.res} '{{print "chr"$1, $2, $3, "chr"$4, $5, $6, $7, $8,  s, r}}' >> {output}
+		rm {output}.tmp
+		"""
+
+
+rule combine_loops_by_sample:
+	input:
+		expand("{outdir}/loops/{{sample}}/{chr}/{res}bp_{chr}.tsv",chr=chromosomes,res=config["res"],outdir=config["outdir"])
+	output:
+		"{outdir}/loops/{sample}/loops.tsv"
+	shell:
+		"""
+		cat {input} > {output} 
+		"""	
+		
+rule combine_all_loops:
+	input:
+		expand("{outdir}/loops/{sample}/loops.tsv",outdir=config["outdir"],sample=config["samples"])
+	output:
+		"{outdir}/loops/unified_loops.pgl"
+	conda:
+		"pgltools_environment.yml"
+	shell:
+		"""
+			PATH=$PATH:/{config[pgltools]}
+			module load compbio/R/3.6.0-GCCcore-7.3.0
+			
+			cat {input} > {output}.notmerged
+			pgltools sort {output}.notmerged > {output}.tmp && mv {output}.tmp {output}.notmerged
+			awk '{{print $0,NR}}' {output}.notmerged > {output}.tmp && mv {output}.tmp {output}.notmerged
+			
+			pgltools merge -a {output}.notmerged -c 7,9,10,11 -o collapse,distinct,collapse,collapse -d 20000 > {output}.merged
+			
+			Rscript loop_peak_coordinates.R {output}.merged {output}.notmerged {output} {config[res]}
+			
+			head -n 1 {output}.notmerged | awk -v OFS="\\t" '{{print "chr1","x1","x2","chr2","y1","y2","color"}}' > {output}.notmerged.2D.bed
+			awk -v OFS="\\t" '{{print $1,$2,$3,$4,$5,$6,"0,255,255"}}' {output}.notmerged >> {output}.notmerged.2D.bed
+			
+			head -n 1 {output}.merged | awk -v OFS="\\t" '{{print "chr1","x1","x2","chr2","y1","y2","color"}}' > {output}.merged.2D.bed
+			tail -n +2 {output}.merged | awk -v OFS="\\t" '{{print $1,$2,$3,$4,$5,$6,"0,255,255"}}' >> {output}.merged.2D.bed
+			
+			head -n 1 {output} | awk -v OFS="\\t" '{{print "chr1","x1","x2","chr2","y1","y2","color"}}' > {output}.2D.bed
+			tail -n +2 {output} | awk -v OFS="\\t" '{{print $1,$2,$3,$4,$5,$6,"0,255,255"}}' >> {output}.2D.bed
+		"""
+		
+		
+		
+		
+		
+		
+		
+		

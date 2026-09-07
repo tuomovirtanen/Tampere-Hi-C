@@ -1,0 +1,27 @@
+samples:
+        - BPH456
+        - BPH651
+        - BPH659
+        - BPH671
+        - BPH688
+        - BPH701
+        - CRPC278
+        - CRPC305
+        - CRPC435
+        - CRPC489
+        - CRPC539
+        - CRPC697
+        - PC15420
+        - PC15760
+        - PC18307
+        - PC19403
+        - PC4980
+        - PC6488
+
+indir: "hic_files/v_14"
+outdir: "HiC/loops/mustache-10kb"
+mustache: "tools/mustache/mustache/mustache.py"
+pgltools: "tools/pgltools/sh"
+res: "10000"
+juicer: "juicer/juicer_tools/juicer_tools_1.14.08.jar"
+

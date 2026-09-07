@@ -1,0 +1,31 @@
+samples:
+        - BPH456
+        - BPH651
+        - BPH651R
+        - BPH659
+        - BPH671
+        - BPH688
+        - BPH701
+        - BPH701R
+        - CRPC278
+        - CRPC278R
+        - CRPC305
+        - CRPC305R
+        - CRPC435
+        - CRPC435R
+        - CRPC489
+        - CRPC489R
+        - CRPC539
+        - CRPC539R
+        - CRPC697
+        - PC15420
+        - PC15760
+        - PC18307
+        - PC19403
+        - PC4980
+        - PC6488
+
+outdir: "HiC/SVs/breakfinder"
+BREAKFINDER: "tools/breakfinder/bin/bin/hic_breakfinder"
+INTER_EXP: "tools/breakfinder/data/hic_breakfinder/inter_expect_1Mb.hg38.txt"
+INTRA_EXP: "tools/breakfinder/data/hic_breakfinder/intra_expect_100kb.hg38.txt"

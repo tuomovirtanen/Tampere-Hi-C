@@ -1,0 +1,17 @@
+configfile: "config.yml"
+
+rule all:
+	input:
+		expand("{outdir}/{sample}/{sample}.breaks.txt",sample=config["samples"],outdir=config["outdir"])
+
+rule breakfinder:
+	input:
+		file="alignments/paired_nodups/{sample}/{sample}.bam"
+	output:
+		"{outdir}/{sample}/{sample}.breaks.txt"
+	shell:
+		"""		
+		module load GCC/8.3.0
+
+		{config[BREAKFINDER]} --bam-file {input} --exp-file-inter {config[INTER_EXP]} --exp-file-intra {config[INTRA_EXP]} --name {wildcards.outdir}/{wildcards.sample}/{wildcards.sample}
+		"""
